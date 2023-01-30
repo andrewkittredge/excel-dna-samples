@@ -3,11 +3,10 @@ using BatchedFunctionCalls;
 using ExcelDna.Integration;
 using System.Diagnostics;
 using System.Threading.Channels;
-using System.Threading.Tasks.Dataflow;
 
 public static class BatchedFunctions
 {
-    private static Channel<FunctionParams> c = Channel.CreateUnbounded<FunctionParams>();
+    private static readonly Channel<FunctionParams> c = Channel.CreateUnbounded<FunctionParams>();
     private static readonly int MaxBatchSize = 2;
 
     static BatchedFunctions()
