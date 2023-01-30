@@ -1,9 +1,12 @@
 ﻿
 using BatchedFunctionCalls;
 using ExcelDna.Integration;
+using Microsoft.Office.Interop.Excel;
 using Open.ChannelExtensions;
 using System.Diagnostics;
 using System.Threading.Channels;
+using Application = Microsoft.Office.Interop.Excel.Application;
+using Range = Microsoft.Office.Interop.Excel.Range;
 
 public static class BatchedFunctions
 {
@@ -31,6 +34,30 @@ public static class BatchedFunctions
         Task<object> t = param.result.Task;
         await t;
 
-        asyncHandle.SetResult(t.Result);
+    private static void SetCellFormatting(string numberFormat, ExcelReference cell)
+    {
+        var cellRange = ToRange(cell);
+        cellRange.NumberFormat = numberFormat;
+    }
+
+    /// <summary>
+    /// https://groups.google.com/g/exceldna/c/4FwjwuPTYO0/m/_OFRuLb0AwAJ.
+    /// </summary>
+    /// <param name="reference"></param>
+    /// <returns></returns>
+    private static Range ToRange(ExcelReference reference)
+    {
+        var xlApp = ExcelDnaUtil.Application as Application;
+        var item = XlCall.Excel(XlCall.xlSheetNm, reference) as string;
+        int index = item.LastIndexOf(']');
+        item = item.Substring(index + 1);
+        var ws = xlApp.Sheets[item] as Worksheet;
+        var target = xlApp.Range[
+            ws.Cells[reference.RowFirst + 1, reference.ColumnFirst + 1],
+            ws.Cells[reference.RowLast + 1, reference.ColumnLast + 1]] as Range;
+
+        return target;
+    }
+
     }
 }
