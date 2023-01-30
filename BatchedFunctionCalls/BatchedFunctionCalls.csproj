@@ -9,6 +9,7 @@
 
   <ItemGroup>
     <PackageReference Include="ExcelDna.AddIn" Version="1.6.0" />
+    <PackageReference Include="Open.ChannelExtensions" Version="6.2.2" />
   </ItemGroup>
 
 </Project>

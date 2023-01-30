@@ -1,6 +1,7 @@
 ﻿
 using BatchedFunctionCalls;
 using ExcelDna.Integration;
+using Open.ChannelExtensions;
 using System.Diagnostics;
 using System.Threading.Channels;
 
@@ -11,23 +12,11 @@ public static class BatchedFunctions
 
     static BatchedFunctions()
     {
-        Task.Run(async delegate
+        c.Reader.Batch(MaxBatchSize, singleReader: true).WithTimeout(1).ReadAllAsync(async batch =>
         {
-            while (true)
+            foreach (var item in batch)
             {
-                // https://makolyte.com/csharp-how-to-batch-read-with-threading-channelreader/
-                await c.Reader.WaitToReadAsync();
-                List<FunctionParams> batch = new();
-                while (batch.Count < MaxBatchSize && c.Reader.TryRead(out FunctionParams p))
-                {
-                    batch.Add(p);
-                }
-                Thread.Sleep(1000);
-                Debug.WriteLine(string.Join(",", batch));
-                foreach(FunctionParams p in batch)
-                {
-                    p.result.SetResult($"done getting {p}");
-                }
+                item.result.SetResult($"done getting {item}");
             }
         });
     }
@@ -41,7 +30,7 @@ public static class BatchedFunctions
         writer.TryWrite(param);
         Task<object> t = param.result.Task;
         await t;
-        
+
         asyncHandle.SetResult(t.Result);
     }
 }
