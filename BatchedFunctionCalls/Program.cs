@@ -17,6 +17,8 @@ public static class BatchedFunctions
     {
         c.Reader.Batch(MaxBatchSize, singleReader: true).WithTimeout(1).ReadAllAsync(async batch =>
         {
+            var requestTime = 1000 + (batch.Count * 10);// Simulate calling a remote server to get data.
+            await Task.Delay(requestTime);
             foreach (var item in batch)
             {
                 item.result.SetResult($"done getting {item}");
