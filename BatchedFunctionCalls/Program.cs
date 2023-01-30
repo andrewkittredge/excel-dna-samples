@@ -16,6 +16,7 @@ public static class BatchedFunctions
         {
             while (true)
             {
+                // https://makolyte.com/csharp-how-to-batch-read-with-threading-channelreader/
                 await c.Reader.WaitToReadAsync();
                 List<FunctionParams> batch = new();
                 while (batch.Count < MaxBatchSize && c.Reader.TryRead(out FunctionParams p))
@@ -24,17 +25,24 @@ public static class BatchedFunctions
                 }
                 Thread.Sleep(1000);
                 Debug.WriteLine(string.Join(",", batch));
+                foreach(FunctionParams p in batch)
+                {
+                    p.result.SetResult($"done getting {p}");
+                }
             }
         });
     }
 
 
     [ExcelFunction(Description = "Function that will be batched")]
-    public static string BatchedCall(string ticker, int year)
+    public static async void BatchedCall(string ticker, int year, ExcelAsyncHandle asyncHandle)
     {
         var writer = c.Writer;
         var param = new FunctionParams() { Ticker = ticker, Year = year };
         writer.TryWrite(param);
-        return "true";
+        Task<object> t = param.result.Task;
+        await t;
+        
+        asyncHandle.SetResult(t.Result);
     }
 }
