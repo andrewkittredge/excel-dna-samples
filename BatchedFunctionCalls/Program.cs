@@ -3,15 +3,17 @@ using BatchedFunctionCalls;
 using ExcelDna.Integration;
 using Microsoft.Office.Interop.Excel;
 using Open.ChannelExtensions;
-using System.Diagnostics;
 using System.Threading.Channels;
 using Application = Microsoft.Office.Interop.Excel.Application;
 using Range = Microsoft.Office.Interop.Excel.Range;
+using ExcelDna.Registration;
+using System.Diagnostics;
 
-public static class BatchedFunctions
+public class BatchedFunctions : IExcelAddIn
 {
     private static readonly Channel<FunctionParams> c = Channel.CreateUnbounded<FunctionParams>();
-    private static readonly int MaxBatchSize = 2;
+    private static readonly int MaxBatchSize = 200;
+    private static readonly int InitialThreadID = Environment.CurrentManagedThreadId;
 
     static BatchedFunctions()
     {
@@ -21,20 +23,25 @@ public static class BatchedFunctions
             await Task.Delay(requestTime);
             foreach (var item in batch)
             {
-                item.result.SetResult($"done getting {item}");
+                item.result.SetResult(item.Year);
             }
         });
     }
 
 
+
     [ExcelFunction(Description = "Function that will be batched")]
     public static async void BatchedCall(string ticker, int year, ExcelAsyncHandle asyncHandle)
     {
+        Debug.Assert(Environment.CurrentManagedThreadId == InitialThreadID);
         var writer = c.Writer;
         var param = new FunctionParams() { Ticker = ticker, Year = year };
         writer.TryWrite(param);
         Task<object> t = param.result.Task;
         await t;
+        Debug.Assert(Environment.CurrentManagedThreadId == InitialThreadID);
+        asyncHandle.SetResult(t.Result);
+    }
 
     private static void SetCellFormatting(string numberFormat, ExcelReference cell)
     {
@@ -61,5 +68,14 @@ public static class BatchedFunctions
         return target;
     }
 
+    public void AutoClose()
+    {
+
+    }
+
+    public void AutoOpen()
+    {
+        ExcelRegistration.GetExcelFunctions().ProcessAsyncRegistrations(nativeAsyncIfAvailable: false).RegisterFunctions();
+        ExcelIntegration.RegisterUnhandledExceptionHandler(ex => "!!!Error " + ex);
     }
 }
