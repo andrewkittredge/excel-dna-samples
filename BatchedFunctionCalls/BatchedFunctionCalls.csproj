@@ -8,8 +8,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Excel-DNA.Interop" Version="15.0.0" />
-    <PackageReference Include="ExcelDna.AddIn" Version="1.6.0" />
     <PackageReference Include="ExcelDna.Registration" Version="1.6.0" />
     <PackageReference Include="Open.ChannelExtensions" Version="6.2.2" />
   </ItemGroup>
