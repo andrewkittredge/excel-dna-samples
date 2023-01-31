@@ -15,6 +15,8 @@ public class BatchedFunctions : IExcelAddIn
     private static readonly int MaxBatchSize = 200;
     private static readonly int InitialThreadID = Environment.CurrentManagedThreadId;
 
+
+    private static int NumberOfBatches = 0;
     static BatchedFunctions()
     {
         c.Reader.Batch(MaxBatchSize, singleReader: true).WithTimeout(1).ReadAllAsync(async batch =>
@@ -25,22 +27,26 @@ public class BatchedFunctions : IExcelAddIn
             {
                 item.result.SetResult(item.Year);
             }
+            Debug.WriteLine($"Number of batches {++NumberOfBatches}");
         });
     }
 
 
-
-    [ExcelFunction(Description = "Function that will be batched")]
-    public static async void BatchedCall(string ticker, int year, ExcelAsyncHandle asyncHandle)
+    private static int NumberOfCalls = 0;
+    [ExcelFunction(Name = "BatchedCall", Description = "Function that will be batched")]
+    public static async Task<object> BatchedCall(
+        [ExcelArgument(Name = "ticker")] string ticker,
+        [ExcelArgument(Name = "year")] int year)
     {
-        Debug.Assert(Environment.CurrentManagedThreadId == InitialThreadID);
+        Debug.WriteLine($"Pushing {year} to queue number of calls {++NumberOfCalls}");
+
         var writer = c.Writer;
         var param = new FunctionParams() { Ticker = ticker, Year = year };
         writer.TryWrite(param);
         Task<object> t = param.result.Task;
         await t;
-        Debug.Assert(Environment.CurrentManagedThreadId == InitialThreadID);
-        asyncHandle.SetResult(t.Result);
+
+        return t.Result;
     }
 
     private static void SetCellFormatting(string numberFormat, ExcelReference cell)
@@ -68,14 +74,16 @@ public class BatchedFunctions : IExcelAddIn
         return target;
     }
 
+
+    public void AutoOpen()
+    {
+        var functions = ExcelRegistration.GetExcelFunctions().ToList();
+        functions.ProcessAsyncRegistrations(nativeAsyncIfAvailable: false).RegisterFunctions();
+    }
+
     public void AutoClose()
     {
 
     }
 
-    public void AutoOpen()
-    {
-        ExcelRegistration.GetExcelFunctions().ProcessAsyncRegistrations(nativeAsyncIfAvailable: false).RegisterFunctions();
-        ExcelIntegration.RegisterUnhandledExceptionHandler(ex => "!!!Error " + ex);
-    }
 }
