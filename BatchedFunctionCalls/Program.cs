@@ -1,5 +1,4 @@
-﻿
-using BatchedFunctionCalls;
+﻿using BatchedFunctionCalls;
 using ExcelDna.Integration;
 using Open.ChannelExtensions;
 using System.Threading.Channels;
@@ -30,19 +29,11 @@ public class BatchedFunctions : IExcelAddIn
     public static async Task<object> BatchedCall(
         [ExcelArgument(Name = "ticker")] string ticker,
         [ExcelArgument(Name = "year")] int year)
-    {
-        var writer = c.Writer;
+    {        
         var param = new FunctionParams() { Ticker = ticker, Year = year };
-        writer.TryWrite(param);
-        Task<object> t = param.result.Task;
-        await t;
-
-        return t.Result;
+        c.Writer.TryWrite(param);
+        return await param.result.Task; ;
     }
-
-
-
-
 
     public void AutoOpen()
     {
