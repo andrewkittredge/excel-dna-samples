@@ -9,6 +9,7 @@ public class BatchedFunctions : IExcelAddIn
 {
     private static Channel<FunctionParams> c = Channel.CreateUnbounded<FunctionParams>();
     private static readonly int MaxBatchSize = 20;
+    private static  int NumberOfBatches = 0;
 
     static BatchedFunctions()
     {
@@ -29,6 +30,7 @@ public class BatchedFunctions : IExcelAddIn
                 {
                     p.result.SetResult($"done getting {p} {Environment.CurrentManagedThreadId}");
                 }
+                Debug.WriteLine($"Done with batch number {NumberOfBatches++}");
             }
         });
     }
@@ -44,7 +46,6 @@ public class BatchedFunctions : IExcelAddIn
         Task<object> t = param.result.Task;
         await t;
         return t.Result;
-
     }
 
     public void AutoOpen()
