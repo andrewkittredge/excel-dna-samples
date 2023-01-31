@@ -3,12 +3,11 @@ using BatchedFunctionCalls;
 using ExcelDna.Integration;
 using System.Diagnostics;
 using System.Threading.Channels;
-using System.Threading.Tasks.Dataflow;
 
 public static class BatchedFunctions
 {
     private static Channel<FunctionParams> c = Channel.CreateUnbounded<FunctionParams>();
-    private static readonly int MaxBatchSize = 2;
+    private static readonly int MaxBatchSize = 20;
 
     static BatchedFunctions()
     {
@@ -23,11 +22,11 @@ public static class BatchedFunctions
                 {
                     batch.Add(p);
                 }
-                Thread.Sleep(1000);
-                Debug.WriteLine(string.Join(",", batch));
+                await Task.Delay(1000);
+                
                 foreach(FunctionParams p in batch)
                 {
-                    p.result.SetResult($"done getting {p}");
+                    p.result.SetResult($"done getting {p} {Environment.CurrentManagedThreadId}");
                 }
             }
         });
@@ -35,14 +34,14 @@ public static class BatchedFunctions
 
 
     [ExcelFunction(Description = "Function that will be batched")]
-    public static async void BatchedCall(string ticker, int year, ExcelAsyncHandle asyncHandle)
+    public static async Task<object> BatchedCall(string ticker, int year)
     {
         var writer = c.Writer;
         var param = new FunctionParams() { Ticker = ticker, Year = year };
         writer.TryWrite(param);
         Task<object> t = param.result.Task;
         await t;
+        return t.Result;
         
-        asyncHandle.SetResult(t.Result);
     }
 }
